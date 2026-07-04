@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartLab Admin — Project Requests</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#020a14;--bg2:#050f1e;--bg3:#071525;--bg4:#0a1d30;
+      --cyan:#00d4ff;--cyan-dim:#0099bb;--gold:#f5a623;--gold-dim:#c27f10;
+      --green:#25d366;--red:#ff4d4d;--white:#e8f4ff;--muted:#5a7a9a;
+      --border:rgba(0,212,255,.18);--glow:0 0 20px rgba(0,212,255,.35);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--white);min-height:100vh}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
+
+    /* ── LOGIN ── */
+    #loginScreen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:1.5rem}
+    .login-card{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:2.8rem 2.4rem;width:100%;max-width:400px;text-align:center}
+    .login-card h1{font-family:'Orbitron',sans-serif;font-size:1.3rem;color:var(--cyan);margin-bottom:.3rem}
+    .login-card p{color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+    .login-card input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;color:var(--white);font-family:'Exo 2',sans-serif;font-size:1rem;outline:none;margin-bottom:1rem;transition:border-color .2s}
+    .login-card input:focus{border-color:var(--cyan-dim)}
+    .login-btn{width:100%;background:var(--cyan);color:var(--bg);font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:700;padding:.9rem;border:none;border-radius:8px;cursor:pointer;transition:box-shadow .2s}
+    .login-btn:hover{box-shadow:var(--glow)}
+    .login-err{color:var(--red);font-size:.82rem;margin-top:.7rem;display:none}
+
+    /* ── LAYOUT ── */
+    #app{display:none;min-height:100vh;position:relative;z-index:1}
+    header{position:sticky;top:0;z-index:50;background:rgba(2,10,20,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between}
+    .header-brand{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;color:var(--white)}
+    .header-brand em{color:var(--cyan);font-style:normal}
+    .header-right{display:flex;align-items:center;gap:1rem}
+    .badge-count{background:var(--gold);color:var(--bg);font-family:'Orbitron',sans-serif;font-size:.72rem;font-weight:700;padding:.2rem .6rem;border-radius:100px}
+    .logout-btn{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--muted);padding:.4rem .9rem;border-radius:6px;cursor:pointer;font-family:'Exo 2',sans-serif;font-size:.82rem;transition:all .2s}
+    .logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+    /* ── TABS ── */
+    .tabs{display:flex;gap:.5rem;padding:1.5rem 2rem .5rem;border-bottom:1px solid var(--border)}
+    .tab-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:.5rem 1.2rem;border-radius:100px;cursor:pointer;font-family:'Exo 2',sans-serif;font-size:.82rem;font-weight:600;letter-spacing:.5px;text-transform:uppercase;transition:all .2s}
+    .tab-btn.active{background:rgba(0,212,255,.1);border-color:var(--cyan);color:var(--cyan)}
+    .tab-count{display:inline-block;background:var(--cyan);color:var(--bg);border-radius:100px;font-size:.68rem;font-weight:700;padding:.05rem .4rem;margin-left:.3rem;font-family:'Orbitron',sans-serif}
+    .tab-count.gold{background:var(--gold)}
+    .tab-count.muted{background:var(--muted)}
+
+    /* ── MAIN ── */
+    main{padding:1.5rem 2rem;max-width:1200px;margin:0 auto}
+
+    /* ── STATS ROW ── */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+    .stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.2rem 1.4rem}
+    .stat-card .stat-val{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;color:var(--cyan);line-height:1}
+    .stat-card .stat-val.gold{color:var(--gold)}
+    .stat-card .stat-val.green{color:var(--green)}
+    .stat-card .stat-val.red{color:var(--red)}
+    .stat-card .stat-label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:.3rem}
+
+    /* ── REQUEST CARDS ── */
+    #requestList{display:flex;flex-direction:column;gap:1rem}
+    .req-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .2s}
+    .req-card.new{border-left:3px solid var(--cyan)}
+    .req-card.replied{border-left:3px solid var(--gold)}
+    .req-card.quoted{border-left:3px solid var(--green)}
+    .req-card.closed{border-left:3px solid var(--muted);opacity:.6}
+    .req-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.4rem;cursor:pointer;gap:1rem}
+    .req-header:hover{background:rgba(255,255,255,.02)}
+    .req-meta{flex:1;min-width:0}
+    .req-name{font-weight:700;font-size:1rem;color:var(--white)}
+    .req-sub{font-size:.8rem;color:var(--muted);margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .req-right{display:flex;align-items:center;gap:.7rem;flex-shrink:0}
+    .status-pill{font-size:.7rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:.25rem .7rem;border-radius:100px;font-family:'Orbitron',sans-serif}
+    .sp-new{background:rgba(0,212,255,.12);color:var(--cyan);border:1px solid rgba(0,212,255,.3)}
+    .sp-replied{background:rgba(245,166,35,.12);color:var(--gold);border:1px solid rgba(245,166,35,.3)}
+    .sp-quoted{background:rgba(37,211,102,.12);color:var(--green);border:1px solid rgba(37,211,102,.3)}
+    .sp-closed{background:rgba(90,122,154,.12);color:var(--muted);border:1px solid rgba(90,122,154,.3)}
+    .ch-icon-pill{font-size:.8rem;padding:.2rem .5rem;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted)}
+    .ch-icon-pill.wa{color:var(--green);border-color:rgba(37,211,102,.3)}
+    .ch-icon-pill.email{color:var(--gold);border-color:rgba(245,166,35,.3)}
+    .chevron{color:var(--muted);font-size:1rem;transition:transform .25s}
+    .chevron.open{transform:rotate(180deg)}
+
+    /* ── EXPANDED BODY ── */
+    .req-body{display:none;padding:0 1.4rem 1.4rem;border-top:1px solid var(--border)}
+    .req-body.open{display:block}
+    .detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.8rem;margin-bottom:1.2rem;padding-top:1.2rem}
+    .detail-item label{font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;display:block;margin-bottom:.2rem}
+    .detail-item p{font-size:.92rem;color:var(--white);word-break:break-word}
+    .desc-block{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:6px;padding:.8rem 1rem;font-size:.88rem;color:var(--white);line-height:1.6;margin-bottom:1.2rem}
+    .action-bar{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center}
+    .act-btn{display:flex;align-items:center;gap:.4rem;padding:.6rem 1.2rem;border-radius:6px;border:none;cursor:pointer;font-family:'Exo 2',sans-serif;font-size:.85rem;font-weight:600;transition:all .2s;text-decoration:none}
+    .act-reply-wa{background:rgba(37,211,102,.1);color:var(--green);border:1px solid rgba(37,211,102,.3)}
+    .act-reply-wa:hover{background:rgba(37,211,102,.2)}
+    .act-reply-email{background:rgba(245,166,35,.1);color:var(--gold);border:1px solid rgba(245,166,35,.3)}
+    .act-reply-email:hover{background:rgba(245,166,35,.2)}
+    .act-quote{background:rgba(0,212,255,.1);color:var(--cyan);border:1px solid rgba(0,212,255,.3)}
+    .act-quote:hover{background:rgba(0,212,255,.2)}
+    .act-close{background:rgba(90,122,154,.1);color:var(--muted);border:1px solid rgba(90,122,154,.2)}
+    .act-close:hover{background:rgba(90,122,154,.2)}
+    .act-delete{background:rgba(255,77,77,.08);color:var(--red);border:1px solid rgba(255,77,77,.2)}
+    .act-delete:hover{background:rgba(255,77,77,.18)}
+    .status-select{background:var(--bg4);border:1px solid var(--border);color:var(--white);padding:.5rem .8rem;border-radius:6px;font-family:'Exo 2',sans-serif;font-size:.82rem;cursor:pointer;outline:none}
+    .status-select option{background:var(--bg2)}
+
+    /* ── QUOTATION MODAL ── */
+    .modal-bg{display:none;position:fixed;inset:0;z-index:300;background:rgba(2,10,20,.92);align-items:center;justify-content:center;padding:1.5rem}
+    .modal-bg.open{display:flex}
+    .modal-box{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:2.2rem;width:100%;max-width:640px;max-height:90vh;overflow-y:auto}
+    .modal-box h2{font-family:'Orbitron',sans-serif;font-size:1.2rem;color:var(--cyan);margin-bottom:.4rem}
+    .modal-box > p{color:var(--muted);font-size:.85rem;margin-bottom:1.8rem}
+    .q-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+    .q-form-group{display:flex;flex-direction:column;gap:.35rem}
+    .q-form-group label{font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600}
+    .q-form-group input,.q-form-group select,.q-form-group textarea{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:.65rem .9rem;color:var(--white);font-family:'Exo 2',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s}
+    .q-form-group input:focus,.q-form-group select:focus,.q-form-group textarea:focus{border-color:var(--cyan-dim)}
+    .q-form-group select option{background:var(--bg2)}
+    .line-items-header{display:grid;grid-template-columns:1fr 80px 110px 110px 32px;gap:.5rem;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;padding:.5rem 0;border-bottom:1px solid var(--border);margin-bottom:.5rem}
+    .line-item-row{display:grid;grid-template-columns:1fr 80px 110px 110px 32px;gap:.5rem;margin-bottom:.5rem;align-items:center}
+    .line-item-row input{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:5px;padding:.55rem .7rem;color:var(--white);font-family:'Exo 2',sans-serif;font-size:.85rem;outline:none;width:100%}
+    .line-item-row input:focus{border-color:var(--cyan-dim)}
+    .del-line{background:transparent;border:none;color:var(--red);cursor:pointer;font-size:1.1rem;padding:.2rem;line-height:1}
+    .add-line-btn{background:transparent;border:1px dashed rgba(0,212,255,.3);color:var(--cyan-dim);padding:.55rem 1rem;border-radius:6px;cursor:pointer;font-family:'Exo 2',sans-serif;font-size:.82rem;transition:all .2s;width:100%;margin-bottom:1.2rem}
+    .add-line-btn:hover{border-color:var(--cyan);background:rgba(0,212,255,.05)}
+    .total-row{display:flex;justify-content:flex-end;gap:1rem;align-items:center;padding:.8rem 0;border-top:1px solid var(--border);margin-bottom:1.2rem}
+    .total-label{font-size:.85rem;color:var(--muted)}
+    .total-val{font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:900;color:var(--gold)}
+    .q-form-group textarea{resize:vertical;min-height:70px}
+    .modal-actions{display:flex;justify-content:flex-end;gap:.8rem;margin-top:1rem}
+    .q-cancel{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--muted);padding:.7rem 1.4rem;border-radius:6px;cursor:pointer;font-family:'Exo 2',sans-serif;font-size:.88rem;transition:all .2s}
+    .q-cancel:hover{border-color:var(--muted);color:var(--white)}
+    .q-download{background:var(--gold);color:var(--bg);font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:700;padding:.7rem 1.6rem;border:none;border-radius:6px;cursor:pointer;transition:box-shadow .2s}
+    .q-download:hover{box-shadow:0 0 20px rgba(245,166,35,.4)}
+
+    /* ── EMPTY STATE ── */
+    .empty-state{text-align:center;padding:4rem 2rem;color:var(--muted)}
+    .empty-state .ei{font-size:3rem;margin-bottom:1rem}
+    .empty-state h3{font-family:'Orbitron',sans-serif;font-size:1rem;color:var(--muted);margin-bottom:.5rem}
+
+    /* ── TOAST ── */
+    .toast{position:fixed;bottom:2rem;right:2rem;z-index:999;background:var(--bg3);border:1px solid var(--cyan);border-radius:8px;padding:1rem 1.4rem;font-size:.88rem;color:var(--white);box-shadow:var(--glow);transform:translateY(100px);opacity:0;transition:all .3s;max-width:320px}
+    .toast.show{transform:translateY(0);opacity:1}
+    .toast.error{border-color:var(--red)}
+    .toast.success{border-color:var(--green)}
+
+    @media(max-width:700px){.stats-row{grid-template-columns:1fr 1fr}.q-grid{grid-template-columns:1fr}.line-items-header,.line-item-row{grid-template-columns:1fr 60px 90px 90px 28px}}
+    @media(max-width:480px){.stats-row{grid-template-columns:1fr 1fr}.action-bar{flex-direction:column;align-items:stretch}}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <h1>⚡ SMARTLAB ADMIN</h1>
+    <p>Enter your password to access the dashboard</p>
+    <input type="password" id="pwInput" placeholder="Admin password" onkeydown="if(event.key==='Enter')doLogin()" />
+    <button class="login-btn" onclick="doLogin()">Access Dashboard</button>
+    <div class="login-err" id="loginErr">Incorrect password. Try again.</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <header>
+    <div class="header-brand">SMART<em>LAB</em> <span style="color:var(--gold)">ADMIN</span></div>
+    <div class="header-right">
+      <span class="badge-count" id="newCount">0 New</span>
+      <button class="logout-btn" onclick="doLogout()">Log Out</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="filterTab('all',this)">All <span class="tab-count" id="tc-all">0</span></button>
+    <button class="tab-btn" onclick="filterTab('new',this)">New <span class="tab-count" id="tc-new">0</span></button>
+    <button class="tab-btn" onclick="filterTab('replied',this)">Replied <span class="tab-count gold" id="tc-replied">0</span></button>
+    <button class="tab-btn" onclick="filterTab('quoted',this)">Quoted <span class="tab-count" style="background:var(--green)" id="tc-quoted">0</span></button>
+    <button class="tab-btn" onclick="filterTab('closed',this)">Closed <span class="tab-count muted" id="tc-closed">0</span></button>
+  </div>
+
+  <main>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val" id="s-total">0</div><div class="stat-label">Total Requests</div></div>
+      <div class="stat-card"><div class="stat-val" id="s-new">0</div><div class="stat-label">Awaiting Reply</div></div>
+      <div class="stat-card"><div class="stat-val gold" id="s-quoted">0</div><div class="stat-label">Quoted</div></div>
+      <div class="stat-card"><div class="stat-val green" id="s-closed">0</div><div class="stat-label">Closed / Done</div></div>
+    </div>
+
+    <div id="requestList"></div>
+  </main>
+</div>
+
+<!-- QUOTATION MODAL -->
+<div class="modal-bg" id="quoteModal">
+  <div class="modal-box">
+    <h2>📄 Generate Quotation</h2>
+    <p>Fill in the details below, then download as a Word document.</p>
+
+    <div class="q-grid">
+      <div class="q-form-group"><label>Quote Number</label><input type="text" id="qNum" placeholder="SLC-2026-001" /></div>
+      <div class="q-form-group"><label>Date</label><input type="date" id="qDate" /></div>
+      <div class="q-form-group"><label>Valid Until</label><input type="date" id="qValid" /></div>
+      <div class="q-form-group"><label>Payment Terms</label><input type="text" id="qPayment" value="50% deposit, 50% on delivery" /></div>
+    </div>
+    <div class="q-grid">
+      <div class="q-form-group"><label>Client Name</label><input type="text" id="qClient" /></div>
+      <div class="q-form-group"><label>Client Phone</label><input type="text" id="qPhone" /></div>
+      <div class="q-form-group"><label>Client Email</label><input type="text" id="qEmail" /></div>
+      <div class="q-form-group"><label>Institution</label><input type="text" id="qInstitution" /></div>
+    </div>
+    <div class="q-form-group" style="margin-bottom:1rem"><label>Project Title</label><input type="text" id="qProject" /></div>
+
+    <!-- Line Items -->
+    <div class="q-form-group" style="margin-bottom:.5rem"><label>Services &amp; Pricing</label></div>
+    <div class="line-items-header"><span>Description</span><span>Qty</span><span>Unit Price (ZMW)</span><span>Total</span><span></span></div>
+    <div id="lineItems"></div>
+    <button class="add-line-btn" onclick="addLine()">+ Add Line Item</button>
+
+    <div class="total-row">
+      <span class="total-label">Grand Total:</span>
+      <span class="total-val" id="grandTotal">ZMW 0</span>
+    </div>
+
+    <div class="q-form-group" style="margin-bottom:1rem">
+      <label>Notes / Terms (optional)</label>
+      <textarea id="qNotes" placeholder="Any extra terms or notes for the client…">1. Valid for 30 days.&#10;2. 50% deposit required before work begins.&#10;3. Balance due on delivery.&#10;4. Up to 2 revision rounds included.</textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="q-cancel" onclick="closeQuoteModal()">Cancel</button>
+      <button class="q-download" onclick="downloadQuotation()">⬇ Download Word Doc</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<!-- docx.js for Word generation -->
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<!-- FileSaver for download -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<script>
+// ══════════════════════════════════════════════
+// 🔧 CONFIG — replace with your actual values
+// ══════════════════════════════════════════════
+const ADMIN_PASSWORD = "smartlab2026"; // Change this!
+const FB_CONFIG = {
+  apiKey:            "YOUR_FIREBASE_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+// ══════════════════════════════════════════════
+
+firebase.initializeApp(FB_CONFIG);
+const db = firebase.firestore();
+
+let allRequests = [];
+let currentFilter = 'all';
+let quoteTargetId = null;
+
+// ── LOGIN ──────────────────────────────────────
+function doLogin() {
+  const pw = document.getElementById('pwInput').value;
+  if (pw === ADMIN_PASSWORD) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    startListening();
+  } else {
+    document.getElementById('loginErr').style.display = 'block';
+    document.getElementById('pwInput').value = '';
+  }
+}
+function doLogout() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pwInput').value = '';
+  document.getElementById('loginErr').style.display = 'none';
+}
+
+// ── FIRESTORE LISTENER ─────────────────────────
+function startListening() {
+  db.collection('requests').orderBy('submittedAt','desc').onSnapshot(snap => {
+    allRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateStats();
+    renderList();
+  });
+}
+
+// ── STATS ──────────────────────────────────────
+function updateStats() {
+  const total   = allRequests.length;
+  const newReqs = allRequests.filter(r => r.status === 'new').length;
+  const quoted  = allRequests.filter(r => r.status === 'quoted').length;
+  const closed  = allRequests.filter(r => r.status === 'closed').length;
+  const replied = allRequests.filter(r => r.status === 'replied').length;
+  document.getElementById('s-total').textContent  = total;
+  document.getElementById('s-new').textContent    = newReqs;
+  document.getElementById('s-quoted').textContent = quoted;
+  document.getElementById('s-closed').textContent = closed;
+  document.getElementById('newCount').textContent = `${newReqs} New`;
+  document.getElementById('tc-all').textContent     = total;
+  document.getElementById('tc-new').textContent     = newReqs;
+  document.getElementById('tc-replied').textContent = replied;
+  document.getElementById('tc-quoted').textContent  = quoted;
+  document.getElementById('tc-closed').textContent  = closed;
+}
+
+// ── TABS ───────────────────────────────────────
+function filterTab(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+// ── RENDER LIST ────────────────────────────────
+function renderList() {
+  const filtered = currentFilter === 'all' ? allRequests : allRequests.filter(r => r.status === currentFilter);
+  const list = document.getElementById('requestList');
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="ei">📭</div><h3>No requests here</h3><p>New project requests will appear instantly.</p></div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(r => buildCard(r)).join('');
+}
+
+function buildCard(r) {
+  const date = r.submittedAt ? new Date(r.submittedAt.toDate()).toLocaleString() : r.submittedAtISO || '';
+  const chClass = r.replyChannel === 'wa' ? 'wa' : 'email';
+  const chLabel = r.replyChannel === 'wa' ? '💬 WhatsApp' : '✉️ Email';
+  const spClass  = `sp-${r.status || 'new'}`;
+  const cardClass = r.status || 'new';
+
+  const statusOptions = ['new','replied','quoted','closed'].map(s =>
+    `<option value="${s}" ${r.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`
+  ).join('');
+
+  // Reply button config
+  const waNum = '260772530495';
+  const waMsg = encodeURIComponent(`Hi ${r.name}, thank you for reaching out to SmartLab Creations! We have received your request for "${r.service || 'your project'}" and will get back to you shortly with a quotation.`);
+  const emailSubject = encodeURIComponent(`Re: Your SmartLab Creations Request — ${r.service || 'Project'}`);
+  const emailBody = encodeURIComponent(`Hi ${r.name},\n\nThank you for contacting SmartLab Creations!\n\nWe have received your request for "${r.service || 'your project'}" and will send you a detailed quotation shortly.\n\nBest regards,\nSmartLab Creations\n0772 530 495 | 0779 520 821`);
+
+  return `
+  <div class="req-card ${cardClass}" id="card-${r.id}">
+    <div class="req-header" onclick="toggleCard('${r.id}')">
+      <div class="req-meta">
+        <div class="req-name">${esc(r.name)} <span style="color:var(--muted);font-weight:400;font-size:.85rem">— ${esc(r.service||'')}</span></div>
+        <div class="req-sub">${esc(r.title||r.desc||'')} · ${date}</div>
+      </div>
+      <div class="req-right">
+        <span class="ch-icon-pill ${chClass}">${chLabel}</span>
+        <span class="status-pill ${spClass}">${r.status||'new'}</span>
+        <span class="chevron" id="chev-${r.id}">▼</span>
+      </div>
+    </div>
+    <div class="req-body" id="body-${r.id}">
+      <div class="detail-grid">
+        <div class="detail-item"><label>Phone</label><p>${esc(r.phone||'—')}</p></div>
+        <div class="detail-item"><label>Email</label><p>${esc(r.email||'—')}</p></div>
+        <div class="detail-item"><label>Institution</label><p>${esc(r.institution||'—')}</p></div>
+        <div class="detail-item"><label>Deadline</label><p>${esc(r.deadline||'Not specified')}</p></div>
+        <div class="detail-item"><label>Project Title</label><p>${esc(r.title||'—')}</p></div>
+        <div class="detail-item"><label>Submitted</label><p>${date}</p></div>
+      </div>
+      <div class="desc-block">${esc(r.desc||'')}</div>
+      <div class="action-bar">
+        <a class="act-btn act-reply-wa" href="https://wa.me/${waNum}?text=${waMsg}" target="_blank">💬 Reply WhatsApp</a>
+        <a class="act-btn act-reply-email" href="mailto:${r.email||''}?subject=${emailSubject}&body=${emailBody}">✉️ Reply Email</a>
+        <button class="act-btn act-quote" onclick="openQuoteModal('${r.id}')">📄 Make Quotation</button>
+        <select class="status-select" onchange="updateStatus('${r.id}',this.value)">${statusOptions}</select>
+        <button class="act-btn act-delete" onclick="deleteRequest('${r.id}')">🗑 Delete</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleCard(id) {
+  const body = document.getElementById(`body-${id}`);
+  const chev = document.getElementById(`chev-${id}`);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+async function updateStatus(id, status) {
+  try {
+    await db.collection('requests').doc(id).update({ status });
+    showToast(`Status updated to "${status}"`, false);
+  } catch(e) { showToast('Failed to update status', true); }
+}
+
+async function deleteRequest(id) {
+  if (!confirm('Delete this request permanently?')) return;
+  try {
+    await db.collection('requests').doc(id).delete();
+    showToast('Request deleted', false);
+  } catch(e) { showToast('Delete failed', true); }
+}
+
+// ── QUOTATION MODAL ────────────────────────────
+function openQuoteModal(id) {
+  quoteTargetId = id;
+  const r = allRequests.find(x => x.id === id);
+  if (!r) return;
+
+  // Pre-fill from request
+  document.getElementById('qNum').value        = 'SLC-' + new Date().getFullYear() + '-' + String(allRequests.indexOf(r)+1).padStart(3,'0');
+  document.getElementById('qDate').value       = new Date().toISOString().split('T')[0];
+  const valid = new Date(); valid.setDate(valid.getDate()+30);
+  document.getElementById('qValid').value      = valid.toISOString().split('T')[0];
+  document.getElementById('qClient').value     = r.name || '';
+  document.getElementById('qPhone').value      = r.phone || '';
+  document.getElementById('qEmail').value      = r.email || '';
+  document.getElementById('qInstitution').value= r.institution || '';
+  document.getElementById('qProject').value    = r.title || r.service || '';
+  document.getElementById('qPayment').value    = '50% deposit, 50% on delivery';
+
+  // Default line items based on service
+  document.getElementById('lineItems').innerHTML = '';
+  const defaults = {
+    'Circuit Designing':      [{ desc:'Schematic Design', qty:1, unit:150 },{ desc:'PCB Layout', qty:1, unit:100 }],
+    'Circuit Simulation':     [{ desc:'Circuit Simulation (Proteus/Multisim)', qty:1, unit:120 }],
+    'Coding & Programming':   [{ desc:'Embedded/Microcontroller Code', qty:1, unit:200 },{ desc:'Code Documentation', qty:1, unit:50 }],
+    'Project Report Writing': [{ desc:'Full Technical Report', qty:1, unit:130 }],
+    'Multiple Services':      [{ desc:'Circuit Designing', qty:1, unit:150 },{ desc:'Circuit Simulation', qty:1, unit:120 },{ desc:'Coding & Programming', qty:1, unit:200 },{ desc:'Project Report Writing', qty:1, unit:130 }]
+  };
+  const lines = defaults[r.service] || [{ desc: r.service || 'Service', qty:1, unit:150 }];
+  lines.forEach(l => addLine(l));
+  calcTotal();
+
+  document.getElementById('quoteModal').classList.add('open');
+}
+
+function closeQuoteModal() {
+  document.getElementById('quoteModal').classList.remove('open');
+  quoteTargetId = null;
+}
+
+let lineCount = 0;
+function addLine(data = {}) {
+  lineCount++;
+  const id = 'li' + lineCount;
+  const div = document.createElement('div');
+  div.className = 'line-item-row';
+  div.id = id;
+  div.innerHTML = `
+    <input type="text"   class="li-desc" value="${esc(data.desc||'')}" placeholder="Service description" oninput="calcTotal()" />
+    <input type="number" class="li-qty"  value="${data.qty||1}"  min="1" oninput="calcTotal()" />
+    <input type="number" class="li-unit" value="${data.unit||0}" min="0" placeholder="0" oninput="calcTotal()" />
+    <input type="text"   class="li-total" readonly value="${((data.qty||1)*(data.unit||0)).toLocaleString()}" style="color:var(--cyan)" />
+    <button class="del-line" onclick="removeLine('${id}')">✕</button>`;
+  document.getElementById('lineItems').appendChild(div);
+  calcTotal();
+}
+
+function removeLine(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+  calcTotal();
+}
+
+function calcTotal() {
+  let total = 0;
+  document.querySelectorAll('.line-item-row').forEach(row => {
+    const qty  = parseFloat(row.querySelector('.li-qty').value) || 0;
+    const unit = parseFloat(row.querySelector('.li-unit').value) || 0;
+    const t = qty * unit;
+    row.querySelector('.li-total').value = t.toLocaleString();
+    total += t;
+  });
+  document.getElementById('grandTotal').textContent = 'ZMW ' + total.toLocaleString();
+  return total;
+}
+
+// ── WORD DOCUMENT GENERATION ───────────────────
+async function downloadQuotation() {
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign } = docx;
+
+  const qNum       = document.getElementById('qNum').value || 'SLC-2026-001';
+  const qDate      = document.getElementById('qDate').value || new Date().toISOString().split('T')[0];
+  const qValid     = document.getElementById('qValid').value || '';
+  const qPayment   = document.getElementById('qPayment').value || '';
+  const clientName = document.getElementById('qClient').value || '[Client]';
+  const clientPhone= document.getElementById('qPhone').value || '';
+  const clientEmail= document.getElementById('qEmail').value || '';
+  const institution= document.getElementById('qInstitution').value || '';
+  const project    = document.getElementById('qProject').value || '';
+  const notesRaw   = document.getElementById('qNotes').value || '';
+
+  // Collect line items
+  const lines = [];
+  document.querySelectorAll('.line-item-row').forEach(row => {
+    const desc = row.querySelector('.li-desc').value.trim();
+    const qty  = parseFloat(row.querySelector('.li-qty').value) || 1;
+    const unit = parseFloat(row.querySelector('.li-unit').value) || 0;
+    if (desc) lines.push({ desc, qty, unit });
+  });
+  const grandTotal = lines.reduce((s,l) => s + l.qty*l.unit, 0);
+
+  // ── Colour tokens ──
+  const DARK   = '001F3F';
+  const CYAN   = '00A8E8';
+  const GOLD   = 'F5A623';
+  const WHITE  = 'FFFFFF';
+  const LIGHT  = 'E8F7FD';
+  const GRAY   = '6C757D';
+
+  const nb = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const noBrd = { top:nb, bottom:nb, left:nb, right:nb };
+  const bdr = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
+  const allBdr = { top:bdr, bottom:bdr, left:bdr, right:bdr };
+
+  function P(children, align, before, after) {
+    return new Paragraph({
+      alignment: align || AlignmentType.LEFT,
+      spacing: { before: before||0, after: after||60 },
+      children: Array.isArray(children) ? children : [children]
+    });
+  }
+  function T(text, opts={}) {
+    return new TextRun({ text, bold:opts.bold, size:opts.size||22, color:opts.color||'111111', font:opts.font||'Arial', italics:opts.italic });
+  }
+  function Cell(children, opts={}) {
+    return new TableCell({
+      borders: opts.borders ?? allBrd,
+      width: { size: opts.w||2000, type: WidthType.DXA },
+      shading: opts.fill ? { fill:opts.fill, type:ShadingType.CLEAR } : undefined,
+      margins: { top:80, bottom:80, left:120, right:120 },
+      verticalAlign: opts.va || VerticalAlign.CENTER,
+      children
+    });
+  }
+
+  // Header table
+  const headerTable = new Table({
+    width: { size:9360, type:WidthType.DXA },
+    columnWidths: [5000,4360],
+    rows: [new TableRow({ children: [
+      new TableCell({ borders:noBrd, width:{size:5000,type:WidthType.DXA}, shading:{fill:DARK,type:ShadingType.CLEAR}, margins:{top:200,bottom:200,left:200,right:120}, children:[
+        P(T('SMARTLAB', {bold:true,size:44,color:WHITE})),
+        P(T('CREATIONS', {bold:true,size:28,color:CYAN})),
+        P(T('Where Innovation Meets Execution', {size:18,color:'AAAAAA',italic:true}))
+      ]}),
+      new TableCell({ borders:noBrd, width:{size:4360,type:WidthType.DXA}, shading:{fill:DARK,type:ShadingType.CLEAR}, margins:{top:200,bottom:200,left:120,right:200}, verticalAlign:VerticalAlign.CENTER, children:[
+        P(T('musondamumbabs-coder.github.io', {size:17,color:CYAN}), AlignmentType.RIGHT),
+        P(T('0772 530 495  |  0779 520 821', {size:19,color:GOLD,bold:true}), AlignmentType.RIGHT)
+      ]})
+    ]})]
+  });
+
+  function Divider(label) {
+    return new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[9360], rows:[new TableRow({ children:[new TableCell({ borders:noBrd, width:{size:9360,type:WidthType.DXA}, shading:{fill:CYAN,type:ShadingType.CLEAR}, margins:{top:60,bottom:60,left:140,right:140}, children:[P(T(label,{bold:true,size:22,color:WHITE}))] })] })]});
+  }
+
+  function InfoTable(leftPairs, rightPairs) {
+    function makeRows(pairs, w1, w2) {
+      return pairs.map(([lbl,val]) => new TableRow({ children:[
+        new TableCell({ borders:noBrd, width:{size:w1,type:WidthType.DXA}, margins:{top:40,bottom:40,left:0,right:80}, children:[P(T(lbl+':',{bold:true,size:20,color:DARK}))] }),
+        new TableCell({ borders:noBrd, width:{size:w2,type:WidthType.DXA}, margins:{top:40,bottom:40,left:0,right:0}, children:[P(T(val||'—',{size:20,color:'333333'}))] })
+      ]}));
+    }
+    return new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[4400,4960], rows:[new TableRow({ children:[
+      new TableCell({ borders:{top:nb,bottom:nb,left:nb,right:{style:BorderStyle.SINGLE,size:2,color:CYAN}}, width:{size:4400,type:WidthType.DXA}, margins:{top:60,bottom:60,left:0,right:200}, children:[new Table({ width:{size:4400,type:WidthType.DXA}, columnWidths:[1600,2800], rows:makeRows(leftPairs,1600,2800) })] }),
+      new TableCell({ borders:noBrd, width:{size:4960,type:WidthType.DXA}, margins:{top:60,bottom:60,left:200,right:0}, children:[new Table({ width:{size:4960,type:WidthType.DXA}, columnWidths:[1600,3360], rows:makeRows(rightPairs,1600,3360) })] })
+    ]})]});
+  }
+
+  // Line items table
+  const hdrRow = new TableRow({ children:[
+    Cell([P(T('#',{bold:true,size:20,color:WHITE}), AlignmentType.CENTER)], {w:500,fill:CYAN,borders:noBrd}),
+    Cell([P(T('Service / Description',{bold:true,size:20,color:WHITE}))], {w:4360,fill:CYAN,borders:noBrd}),
+    Cell([P(T('Qty',{bold:true,size:20,color:WHITE}), AlignmentType.CENTER)], {w:700,fill:CYAN,borders:noBrd}),
+    Cell([P(T('Unit Price (ZMW)',{bold:true,size:20,color:WHITE}), AlignmentType.RIGHT)], {w:1800,fill:CYAN,borders:noBrd}),
+    Cell([P(T('Total (ZMW)',{bold:true,size:20,color:WHITE}), AlignmentType.RIGHT)], {w:2000,fill:CYAN,borders:noBrd}),
+  ]});
+  const dataRows = lines.map((l,i) => {
+    const fill = i%2===0 ? WHITE : LIGHT;
+    return new TableRow({ children:[
+      Cell([P(T(String(i+1),{size:20}), AlignmentType.CENTER)], {w:500,fill}),
+      Cell([P(T(l.desc,{size:20}))], {w:4360,fill}),
+      Cell([P(T(String(l.qty),{size:20}), AlignmentType.CENTER)], {w:700,fill}),
+      Cell([P(T(l.unit.toLocaleString(),{size:20}), AlignmentType.RIGHT)], {w:1800,fill}),
+      Cell([P(T((l.qty*l.unit).toLocaleString(),{size:20}), AlignmentType.RIGHT)], {w:2000,fill}),
+    ]});
+  });
+  const totalRow = new TableRow({ children:[
+    new TableCell({ borders:noBrd, width:{size:7360,type:WidthType.DXA}, columnSpan:4, margins:{top:80,bottom:80,left:0,right:0}, children:[P([])] }),
+    new TableCell({ borders:noBrd, width:{size:2000,type:WidthType.DXA}, shading:{fill:GOLD,type:ShadingType.CLEAR}, margins:{top:100,bottom:100,left:120,right:120}, children:[P(T('TOTAL: ZMW ' + grandTotal.toLocaleString(),{bold:true,size:22,color:WHITE}), AlignmentType.RIGHT)] })
+  ]});
+  const linesTable = new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[500,4360,700,1800,2000], rows:[hdrRow,...dataRows,totalRow] });
+
+  // Notes
+  const notes = notesRaw.split('\n').filter(l=>l.trim()).map(l => P(T(l,{size:20,color:'333333'})));
+
+  // Signature table
+  const sigTable = new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[4680,4680], rows:[new TableRow({ children:[
+    Cell([
+      P(T('Prepared by (SmartLab Creations):',{bold:true,size:20,color:DARK})),P([]),
+      P(T('Signature: _______________________________',{size:20})),
+      P(T('Name:      Musonda Mumba',{size:20})),
+      P(T('Date:      '+qDate,{size:20}))
+    ], {w:4680,fill:LIGHT}),
+    Cell([
+      P(T('Accepted by (Client):',{bold:true,size:20,color:DARK})),P([]),
+      P(T('Signature: _______________________________',{size:20})),
+      P(T('Name:      '+clientName,{size:20})),
+      P(T('Date:      _______________',{size:20}))
+    ], {w:4680})
+  ]})]});
+
+  // Footer table
+  const footerTable = new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[9360], rows:[new TableRow({ children:[
+    new TableCell({ borders:noBrd, width:{size:9360,type:WidthType.DXA}, shading:{fill:DARK,type:ShadingType.CLEAR}, margins:{top:120,bottom:120,left:200,right:200}, children:[
+      P(T('Fast  •  Reliable  •  Student-Friendly  |  SmartLab Creations',{bold:true,size:18,color:CYAN}), AlignmentType.CENTER),
+      P(T('0772 530 495  |  0779 520 821  |  musondamumbabs-coder.github.io/SMARTLAB-CREATIONS-',{size:17,color:'AAAAAA'}), AlignmentType.CENTER)
+    ]})
+  ]})]});
+
+  const doc = new Document({ sections:[{ properties:{ page:{ size:{width:12240,height:15840}, margin:{top:720,right:720,bottom:720,left:720} } }, children:[
+    headerTable,
+    P([]),
+    P(T('QUOTATION',{bold:true,size:44,color:DARK}), AlignmentType.CENTER, 120, 40),
+    P(T('Ref: '+qNum,{size:20,color:GRAY,italic:true}), AlignmentType.CENTER, 0, 200),
+    Divider('CLIENT INFORMATION'),
+    P([]),
+    InfoTable(
+      [['Client',clientName],['Phone',clientPhone],['Email',clientEmail]],
+      [['Quote No.',qNum],['Date',qDate],['Valid Until',qValid]]
+    ),
+    P([]),
+    P([T('Project: ',{bold:true,size:21,color:DARK}),T(project,{size:21}),T('   |   Institution: ',{bold:true,size:21,color:DARK}),T(institution||'—',{size:21})]),
+    P([]),
+    Divider('SERVICES & PRICING'),
+    P([]),
+    linesTable,
+    P([]),
+    P([T('Payment Terms: ',{bold:true,size:20,color:DARK}),T(qPayment,{size:20})]),
+    P([]),
+    Divider('TERMS & CONDITIONS'),
+    P([]),
+    ...notes,
+    P([]),
+    Divider('AUTHORISATION'),
+    P([]),
+    sigTable,
+    P([]),
+    footerTable
+  ]}]});
+
+  try {
+    const buf = await Packer.toBuffer(doc);
+    const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    saveAs(blob, `SmartLab_Quote_${qNum.replace(/[^a-z0-9]/gi,'_')}.docx`);
+    // Mark as quoted
+    if (quoteTargetId) {
+      await db.collection('requests').doc(quoteTargetId).update({ status:'quoted' });
+    }
+    showToast('✅ Quotation downloaded!', false, true);
+    closeQuoteModal();
+  } catch(err) {
+    console.error(err);
+    showToast('Failed to generate document. Check console.', true);
+  }
+}
+
+function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showToast(msg, isError, isSuccess) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError?' error':'') + (isSuccess?' success':'');
+  setTimeout(() => t.className = 'toast', 3500);
+}
+</script>
+</body>
+</html>
