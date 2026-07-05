@@ -21,8 +21,14 @@
     .login-card{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:2.8rem 2.4rem;width:100%;max-width:400px;text-align:center}
     .login-card h1{font-family:'Orbitron',sans-serif;font-size:1.3rem;color:var(--cyan);margin-bottom:.3rem}
     .login-card p{color:var(--muted);font-size:.85rem;margin-bottom:2rem}
-    .login-card input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;color:var(--white);font-family:'Exo 2',sans-serif;font-size:1rem;outline:none;margin-bottom:1rem;transition:border-color .2s}
+    .login-card input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:.85rem 2.8rem .85rem 1rem;color:var(--white);font-family:'Exo 2',sans-serif;font-size:1rem;outline:none;transition:border-color .2s}
     .login-card input:focus{border-color:var(--cyan-dim)}
+    .login-pw-wrap{position:relative;margin-bottom:1rem}
+    .login-pw-wrap input{margin-bottom:0}
+    .login-pw-wrap.shake{animation:pwShake .35s}
+    @keyframes pwShake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}30%,50%,70%{transform:translateX(-4px)}40%,60%{transform:translateX(4px)}}
+    .pw-toggle{position:absolute;right:.9rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.1rem;padding:.2rem;line-height:1;transition:color .2s}
+    .pw-toggle:hover{color:var(--cyan)}
     .login-btn{width:100%;background:var(--cyan);color:var(--bg);font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:700;padding:.9rem;border:none;border-radius:8px;cursor:pointer;transition:box-shadow .2s}
     .login-btn:hover{box-shadow:var(--glow)}
     .login-err{color:var(--red);font-size:.82rem;margin-top:.7rem;display:none}
@@ -197,8 +203,11 @@
   <div class="login-card">
     <h1>⚡ SMARTLAB ADMIN</h1>
     <p>Enter your password to access the dashboard</p>
-    <input type="password" id="pwInput" placeholder="Admin password" onkeydown="if(event.key==='Enter')doLogin()" />
-    <button class="login-btn" onclick="doLogin()">Access Dashboard</button>
+    <div class="login-pw-wrap" id="pwWrap">
+  <input type="password" id="pwInput" placeholder="Admin password" onkeydown="if(event.key==='Enter')doLogin()" />
+  <button type="button" class="pw-toggle" id="pwToggle" onclick="togglePasswordVisibility()">👁️</button>
+</div>
+<button class="login-btn" onclick="doLogin()">Access Dashboard</button>
     <div class="login-err" id="loginErr">Incorrect password. Try again.</div>
   </div>
 </div>
@@ -400,10 +409,23 @@ function doLogin() {
     document.getElementById('app').style.display = 'block';
     startListening();
     startPortfolioListening();
-  } else {
+ } else {
     document.getElementById('loginErr').style.display = 'block';
     document.getElementById('pwInput').value = '';
+    showToast('❌ Incorrect password. Please try again.', true);
+    const wrap = document.getElementById('pwWrap');
+    wrap.classList.remove('shake');
+    void wrap.offsetWidth; // restart animation
+    wrap.classList.add('shake');
+    document.getElementById('pwInput').focus();
   }
+}
+function togglePasswordVisibility() {
+  const input = document.getElementById('pwInput');
+  const btn = document.getElementById('pwToggle');
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.textContent = showing ? '👁️' : '🙈';
 }
 function doLogout() {
   document.getElementById('loginScreen').style.display = 'flex';
