@@ -405,7 +405,6 @@ let pfPrefillRequestId = null;
 
 // ── LOGIN ──────────────────────────────────────
 function doLogin() {
-  const email = document.getElementById('pwInput').getAttribute('data-email') || ADMIN_EMAIL;
   const pw = document.getElementById('pwInput').value;
   auth.signInWithEmailAndPassword(ADMIN_EMAIL, pw)
     .then(() => {
