@@ -367,6 +367,7 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <!-- docx.js for Word generation -->
 <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 <!-- FileSaver for download -->
@@ -379,7 +380,7 @@
 // ══════════════════════════════════════════════
 // 🔧 CONFIG — replace with your actual values
 // ══════════════════════════════════════════════
-const ADMIN_PASSWORD = "SmartLabMG"; // Change this!
+const ADMIN_EMAIL = "musonda@smartlabcreations.com"; // the admin email you created in Firebase Auth
 const FB_CONFIG = {
   apiKey:            "AIzaSyB_BjaKagWe5YsBaSk1DIyyndvOMvfJlCo",
   authDomain:        "smart-lab-creations-1.firebaseapp.com",
@@ -392,7 +393,8 @@ const FB_CONFIG = {
 
 firebase.initializeApp(FB_CONFIG);
 const db = firebase.firestore();
-
+const auth = firebase.auth();
+  
 let allRequests = [];
 let currentFilter = 'all';
 let quoteTargetId = null;
@@ -403,22 +405,25 @@ let pfPrefillRequestId = null;
 
 // ── LOGIN ──────────────────────────────────────
 function doLogin() {
+  const email = document.getElementById('pwInput').getAttribute('data-email') || ADMIN_EMAIL;
   const pw = document.getElementById('pwInput').value;
-  if (pw === ADMIN_PASSWORD) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    startListening();
-    startPortfolioListening();
- } else {
-    document.getElementById('loginErr').style.display = 'block';
-    document.getElementById('pwInput').value = '';
-    showToast('❌ Incorrect password. Please try again.', true);
-    const wrap = document.getElementById('pwWrap');
-    wrap.classList.remove('shake');
-    void wrap.offsetWidth; // restart animation
-    wrap.classList.add('shake');
-    document.getElementById('pwInput').focus();
-  }
+  auth.signInWithEmailAndPassword(ADMIN_EMAIL, pw)
+    .then(() => {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      startListening();
+      startPortfolioListening();
+    })
+    .catch(() => {
+      document.getElementById('loginErr').style.display = 'block';
+      document.getElementById('pwInput').value = '';
+      showToast('❌ Incorrect password. Please try again.', true);
+      const wrap = document.getElementById('pwWrap');
+      wrap.classList.remove('shake');
+      void wrap.offsetWidth;
+      wrap.classList.add('shake');
+      document.getElementById('pwInput').focus();
+    });
 }
 function togglePasswordVisibility() {
   const input = document.getElementById('pwInput');
@@ -428,6 +433,7 @@ function togglePasswordVisibility() {
   btn.textContent = showing ? '👁️' : '🙈';
 }
 function doLogout() {
+  auth.signOut();
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('pwInput').value = '';
