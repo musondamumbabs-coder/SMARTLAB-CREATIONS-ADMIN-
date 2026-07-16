@@ -414,7 +414,9 @@ function doLogin() {
       startListening();
       startPortfolioListening();
     })
-    .catch(() => {
+    .catch((err) => {
+      console.error('LOGIN ERROR CODE:', err.code);
+      console.error('LOGIN ERROR MESSAGE:', err.message);
       document.getElementById('loginErr').style.display = 'block';
       document.getElementById('pwInput').value = '';
       showToast('❌ Incorrect password. Please try again.', true);
